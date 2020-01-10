@@ -1,3 +1,5 @@
+#!/home/sunhanbo/software/anaconda3/bin/python
+#-*-coding:utf-8-*-
 import argparse
 import os
 import time
@@ -50,7 +52,7 @@ def get_dataset(device):
         drop_last=True,
         pin_memory=pin_memory,
     )
-    test_dataset = torchvision.datasets.MNIST(
+    test_dataset = torchvision.datasets.CIFAR10(
         root=os.path.join(os.path.dirname(__file__), 'data'),
         train=False,
         transform=Transforms.Compose([
@@ -105,13 +107,18 @@ class VGG16(nn.Module):
             My3x3Conv(512, 512),
             My3x3Conv(512, 512),
             nn.MaxPool2d(kernel_size=2, stride=2),
+        )
+        self.classifier = nn.Sequential(
             nn.Linear(512, 128),
             nn.Linear(128, num_classes),
         )
     def forward(self, x):
+        x = self.layer_list(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
         return x
 def get_net():
-    net = VGG16()
+    net = VGG16(10)
     print(net)
     return net
 
@@ -139,6 +146,7 @@ def train_net(train_loader, test_loader, net, device):
             optimizer.step()
             print(f'epoch {epoch+1:3d}, {batch_idx:3d}|{len(train_loader):3d}, loss: {loss.item():2.4f}', end = '\r')
         eval_net(test_loader, net, device, epoch)
+        torch.save(net.state_dict(), f'zoo/vgg16_origin.pth')
 def eval_net(test_loader, net, device, epoch):
     net.to(device)
     net.eval()
